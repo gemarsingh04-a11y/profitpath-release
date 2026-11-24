@@ -29,17 +29,23 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Generate Exact Project Keystore
+      - name: Generate Keystore & Configure Signing
         run: |
-          STORE_PASS=$(grep -oP 'storePassword\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
-          KEY_ALIAS=$(grep -oP 'keyAlias\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
-          KEY_PASS=$(grep -oP 'keyPassword\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
-          STORE_PASS=${STORE_PASS:-profitpath123}
-          KEY_ALIAS=${KEY_ALIAS:-key0}
-          KEY_PASS=${KEY_PASS:-$STORE_PASS}
-          echo "PASS=$STORE_PASS | ALIAS=$KEY_ALIAS"
-          keytool -genkey -v -keystore my-upload-key.jks -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$STORE_PASS" -keypass "$KEY_PASS" -dname "CN=ProfitPath, OU=Dev, O=ProfitPath, L=Jodhpur, S=Rajasthan, C=IN"
-          cp my-upload-key.jks app/my-upload-key.jks
+          keytool -genkey -v -keystore app/my-upload-key.jks -alias profitpath_key -keyalg RSA -keysize 2048 -validity 10000 -storepass profitpath123 -keypass profitpath123 -dname "CN=ProfitPath, OU=Dev, O=ProfitPath, L=Jodhpur, S=Rajasthan, C=IN"
+          cp app/my-upload-key.jks my-upload-key.jks
+          cat << 'EOF' >> app/build.gradle.kts
+
+          android {
+              signingConfigs {
+                  getByName("release") {
+                      storeFile = file("my-upload-key.jks")
+                      storePassword = "profitpath123"
+                      keyAlias = "profitpath_key"
+                      keyPassword = "profitpath123"
+                  }
+              }
+          }
+          EOF
 
       - name: Build Signed Release APK & AAB
         run: |
