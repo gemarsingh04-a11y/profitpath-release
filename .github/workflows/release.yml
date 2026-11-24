@@ -11,50 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip Project Files
+      - name: Unzip and Inspect Files
         run: |
-          mkdir -p extracted
-          unzip -q -o *.zip -d extracted
-          GRADLEW_PATH=$(find extracted -name "gradlew" | head -n 1)
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          cp -r "$PROJECT_DIR"/* .
-          cp -r "$PROJECT_DIR"/.[!.]* . 2>/dev/null || true
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Generate Release Keystore
-        run: |
-          keytool -genkey -v -keystore release.jks -alias profitpath_key -keyalg RSA -keysize 2048 -validity 10000 -storepass profitpath123 -keypass profitpath123 -dname "CN=ProfitPath, OU=Dev, O=ProfitPath, L=Jodhpur, S=Rajasthan, C=IN"
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Unsigned Release APK & AAB
-        run: |
-          ./gradlew assembleRelease
-          ./gradlew bundleRelease
-
-      - name: Sign Release APK
-        run: |
-          BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -maxdepth 1 -type d | sort -V | tail -n 1)
-          $BUILD_TOOLS/zipalign -v -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app-release-aligned.apk
-          $BUILD_TOOLS/apksigner sign --ks release.jks --ks-pass pass:profitpath123 --key-pass pass:profitpath123 --out ProfitPath-Signed-Release.apk app-release-aligned.apk
-
-      - name: Sign Release AAB
-        run: |
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.jks -storepass profitpath123 -keypass profitpath123 app/build/outputs/bundle/release/app-release.aab profitpath_key
-          cp app/build/outputs/bundle/release/app-release.aab ProfitPath-Signed-Release.aab
-
-      - name: Upload Store-Ready Files
-        uses: actions/upload-artifact@v4
-        with:
-          name: Store-Publish-Files
-          path: |
-            ProfitPath-Signed-Release.apk
-            ProfitPath-Signed-Release.aab
-            release.jks
-            
+          mkdir -p /tmp/extracted
+          unzip -q -o *.zip -d /tmp/extracted
+          ls -la /tmp/extracted
+          find /tmp/extracted -maxdepth 3
+          
